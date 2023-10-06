@@ -24,4 +24,15 @@ How to run the server
 uvicorn main:app --reload # if you are in the app directory
 uvicorn app.main:app --reload # if you are not in the app directory/ source directory
 ```
+In order to create & run a virtual environment
+type these into the terminal:
+```bash
+python3 -m venv env
+.\env\Scripts\activate # for windows users
+source ./env/bin/activate # for linux users
 
+pip install -r requirements.txt
+pip freeze > requirements.txt
+
+deactivate # to exit virtual enviornment
+```
