@@ -1,8 +1,8 @@
-from fastapi import FastAPI 
+from fastapi import FastAPI, HTTPException
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
 from database import connect_to_mongo, close_mongo_connection
-
+from api.endpoints import resturaunts
 
 app = FastAPI()
 
@@ -25,8 +25,9 @@ app.add_middleware(
 )
 
 
-# app.include_router(upload_content.router)
+app.include_router(resturaunts.router)
 
 @app.get("/")
 def root():
     return {"message": "Server is running"}
+
