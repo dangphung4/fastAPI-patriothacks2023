@@ -1,6 +1,8 @@
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.neighbors import NearestNeighbors
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+from sklearn.preprocessing import MinMaxScaler
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi import APIRouter, HTTPException, Depends
 import os
@@ -9,7 +11,7 @@ from dotenv import load_dotenv
 MONGO_URI = os.environ.get("MONGO_URI")
 client = AsyncIOMotorClient(str(os.getenv("MONGODB_URL")))
 db = client.get_database("bring_the_menu_db")
-collection = db.get_collection("restaurant_info2")
+collection = db.get_collection("restaurant_info6")
 
 router = APIRouter()
 
@@ -18,34 +20,41 @@ async def fetch_data():
     data = await cursor.to_list(length=1000)
     return pd.DataFrame(data)
 
-async def get_recommendations(search_term: str):
+
+async def get_recommendations(restaurant_name: str):
     df = await fetch_data()
     df['all_categories'] = df['categories'].apply(', '.join)
-
-    vectorizer = CountVectorizer()
-    count_matrix = vectorizer.fit_transform(df['all_categories'])
-    cosine_sim = cosine_similarity(count_matrix)
-
-    if search_term not in vectorizer.get_feature_names_out():
+    
+    vectorizer = TfidfVectorizer(analyzer='word', stop_words='english')
+    tfidf_matrix = vectorizer.fit_transform(df['all_categories'])
+    
+    knn = NearestNeighbors(n_neighbors=6, metric='cosine')  
+    knn.fit(tfidf_matrix)
+    
+    if not any(df['name'].str.contains(restaurant_name, case=False, na=False)):
         return []
 
-    idx = list(vectorizer.get_feature_names_out()).index(search_term)
-    sim_scores = list(enumerate(cosine_sim[idx]))
+    matched_restaurants = df[df['name'].str.contains(restaurant_name, case=False, na=False)]
 
-    for i in range(len(sim_scores)):
-        exact_match_weight = 1
-        rating_weight = float(df.iloc[i]['rating']) / 5  # Normalize the rating to a scale of 0 to 1
+    restaurant_idx = matched_restaurants.index[0]
+    restaurant_vector = tfidf_matrix[restaurant_idx]
+    distances, indices = knn.kneighbors(restaurant_vector)
 
-        if search_term.lower() in df.iloc[i]['all_categories'].lower().split(', '):
-            exact_match_weight = 5  # Increase the weight for exact matches
-            
-        sim_scores[i] = (sim_scores[i][0], sim_scores[i][1] * rating_weight * exact_match_weight)
+    # Collect 6 recommendations including the input restaurant
+    recommended_restaurants = df.iloc[indices[0]].to_dict('records')
 
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-    sim_scores = sim_scores[:3]  
-    food_indices = [i[0] for i in sim_scores]
+    # Filter out the input restaurant from recommendations
+    final_recommendations = [restaurant for restaurant in recommended_restaurants 
+                             if restaurant['name'].lower() != restaurant_name.lower()]
 
-    return [dict(item, _id=str(item['_id'])) for item in df.iloc[food_indices].to_dict('records')]
+    # If more than one restaurant has the same name, ensure that 5 unique recommendations are returned
+    if len(final_recommendations) > 5:
+        final_recommendations = final_recommendations[:5]
+
+    return [dict(item, _id=str(item['_id'])) for item in final_recommendations]
+
+# Example usage
+
 
 
 @router.get("/recommendations/{search_term}")
