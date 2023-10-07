@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
-from database import connect_to_mongo, close_mongo_connection
-from api.endpoints import resturaunts
-from api.endpoints import recommendation
+from .database import connect_to_mongo, close_mongo_connection
+from .api.endpoints import resturaunts
+from .api.endpoints import recommendation
 
 app = FastAPI()
 

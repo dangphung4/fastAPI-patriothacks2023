@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 import requests
 import os
-from api.helpers import resturaunts_helper
-from api.helpers import database_helper
+from ..helpers import resturaunts_helper
+from ..helpers import database_helper
 
 router = APIRouter()
 

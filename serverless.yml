@@ -1,0 +1,29 @@
+service: fastapi-lambda
+
+provider:
+  name: aws
+  runtime: python3.10
+  stage: dev
+  region: us-east-1
+  environment:   # Environment variables
+    MONGODB_URL: "mongodb+srv://patriothacks2023:1b7e236beb@patriothacks2023.vggoylp.mongodb.net/?retryWrites=true&w=majority"
+    YELP_API_KEY: "keY-WyjlJGUSNtYDSi2D_B_1zT9Bz-gQrd_squE_lgUDwn8m0MQuPFnfN69WwDgoMAkkgG5fpT3d_A74qWbPrOAizHSRSlO8UAYCK89tKRhrT6fNkLwUYRLy450gZXYx"
+
+functions:
+  app:
+    handler: app.main.handler  
+    layers:
+      - arn:aws:lambda:us-east-1:528461218223:layer:pandas-layer:1
+    events:
+      - http:
+          path: /{proxy+}
+          method: any
+          cors: true
+
+plugins:
+  - serverless-python-requirements
+
+# custom:
+#   pythonRequirements:
+#     fileName: requirements-trimmed.txt  # Specify the trimmed requirements file name
+
