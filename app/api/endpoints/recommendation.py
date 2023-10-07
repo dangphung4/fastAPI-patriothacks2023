@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi import APIRouter, HTTPException, Depends
 import os
-from dotenv import load_dotenv
+import random
 
 MONGO_URI = os.environ.get("MONGO_URI")
 client = AsyncIOMotorClient(str(os.getenv("MONGODB_URL")))
@@ -55,11 +55,29 @@ async def get_recommendations(restaurant_name: str):
 
 # Example usage
 
+async def get_random_recommendations(num_recommendations: int):
+    df = await fetch_data()
 
+    if num_recommendations >= len(df):
+        return df.to_dict('records')
+
+    random_recommendations = random.sample(df.to_dict('records'), num_recommendations)
+    return [dict(item, _id=str(item['_id'])) for item in random_recommendations]
 
 @router.get("/recommendations/{search_term}")
 async def read_recommendations(search_term: str):
     recommendations = await get_recommendations(search_term)
     if not recommendations:
         raise HTTPException(status_code=404, detail=f"No recommendations found for {search_term}")
+    return recommendations
+
+@router.get("/random-recommendations/{num_recommendations}")
+async def read_random_recommendations(num_recommendations: int):
+    if num_recommendations < 1:
+        raise HTTPException(status_code=400, detail="Number of recommendations should be a positive integer")
+
+    recommendations = await get_random_recommendations(num_recommendations)
+    if not recommendations:
+        raise HTTPException(status_code=404, detail="No recommendations found")
+    
     return recommendations
