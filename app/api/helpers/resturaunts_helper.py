@@ -4,6 +4,15 @@ from bson import json_util
 import json
 import requests
 import os
+
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+
+
 from bs4 import BeautifulSoup
 import urllib.parse  
 from urllib.parse import quote
@@ -17,6 +26,8 @@ db = client.get_database("bring_the_menu_db")
 searches_collection = db.get_collection("searches")
 restaurant_info_collection = db.get_collection("restaurant_info")
 
+
+
 # Yelp API endpoint
 YELP_API_ENDPOINT = "https://api.yelp.com/v3/businesses/search"
 def get_restaurants(location):
@@ -29,7 +40,7 @@ def get_restaurants(location):
     params = {
         "term": "restaurants",
         "location": location,
-        "limit": 5,  # Adjust the limit as needed
+        "limit": 1,  # Adjust the limit as needed
         "radius": 8047 # 5 mile radius
     }
 
@@ -43,7 +54,14 @@ def get_restaurants(location):
     businesses = data.get("businesses", [])
 
     restaurants = []
+
+     # Create a new Selenium browser instance
+    options = Options()
+    options.add_argument("--headless")  # Run browser in headless mode (no GUI)
+    browser = webdriver.Chrome(options=options)
+
     for business in businesses:
+        
         # Fetch the Yelp page of the restaurant to scrape the official website
         yelp_url = business['url']
         yelp_page_content = requests.get(yelp_url).content
@@ -57,22 +75,38 @@ def get_restaurants(location):
 
         # If the official website URL is found, scrape it for deals/specials
         deals = []
+        specials = []
         if official_site_url:
             parsed = urllib.parse.urlparse(official_site_url)
             actual_url = urllib.parse.parse_qs(parsed.query)['url'][0]
             print(f"Actual site URL: {actual_url}")
 
-
-            encoded_url = quote(official_site_url, safe='')  # URL-encode the official site URL
-            diffbot_url = f'https://api.diffbot.com/v3/article?token={DIFFBOT_TOKEN}&url={encoded_url}'
-            diffbot_response = requests.get(diffbot_url)
-            print(f"Diffbot raw response: {diffbot_response.text}")  
+            browser.get(actual_url)  # Selenium loads the webpage
             
-            if diffbot_response.status_code != 200:
-                print(f"Error fetching page: {diffbot_response.text}")  # Print the error for review
-                continue  # Skip to the next iteration if there's an error
-            diffbot_data = json.loads(diffbot_response.text)
-            deals = diffbot_data.get('objects', [{}])[0].get('text', '').split('\n')
+            try:
+                # Adjust the expected_conditions and timeout as needed
+                element_present = EC.presence_of_element_located((By.ID, 'menu-item'))
+                WebDriverWait(browser, 30).until(element_present)
+            except TimeoutException:
+                print("Timed out waiting for page to load")
+
+            soup_specials = BeautifulSoup(browser.page_source, 'lxml')
+            print(f"Specials Page Content: {soup_specials.prettify()[:500]}")  
+
+            
+              # Extracting deals
+            deals_elements = soup_specials.find_all('div', class_='deals')
+            print(f"Found {len(deals_elements)} deals elements.")  # Print the count of found elements
+            
+            for deal in deals_elements:
+                deals.append(deal.text.strip())
+
+            # Extracting specials
+            specials_elements = soup_specials.find_all('div', class_='specials')
+            print(f"Found {len(specials_elements)} specials elements.")
+            
+            for special in specials_elements:
+                specials.append(special.text.strip())
         info = {
             "name": business['name'],
             "coordinates": business['coordinates'],
@@ -86,14 +120,16 @@ def get_restaurants(location):
             "yelp_url": yelp_url,
             "yelp_url": yelp_url,
             "official_site_url": official_site_url,
-            "deals": deals  # Store the scraped deals/specials
+            "deals": deals,  # Store the scraped deals/specials
+            "specials": specials
             
         }
         restaurants.append(info)
 
         # Store the information in MongoDB Atlas
         restaurant_info_collection.insert_one(info)
-    
+
+    browser.quit()
     search_data = {"location": location, "results": len(restaurants)}
     searches_collection.insert_one(search_data)
 
