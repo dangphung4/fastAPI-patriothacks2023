@@ -15,6 +15,7 @@ from urllib.parse import quote
 YELP_API_KEY = os.environ.get("YELP_API_KEY")
 MONGO_URI = os.environ.get("MONGO_URI")
 
+
 client = AsyncIOMotorClient(str(os.getenv("MONGODB_URL")))
 db = client.get_database("bring_the_menu_db") 
 searches_collection = db.get_collection("searches")

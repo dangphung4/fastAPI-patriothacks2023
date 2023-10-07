@@ -3,6 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
 from database import connect_to_mongo, close_mongo_connection
 from api.endpoints import resturaunts
+from api.endpoints import recommendation
 
 app = FastAPI()
 
@@ -26,6 +27,7 @@ app.add_middleware(
 
 
 app.include_router(resturaunts.router)
+app.include_router(recommendation.router)
 
 @app.get("/")
 def root():
