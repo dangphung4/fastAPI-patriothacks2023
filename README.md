@@ -21,6 +21,7 @@ MONGODB_URL= ###MONGO DB CONNECTION URL
 
 How to run the server
 ```bash
+cd app/
 uvicorn main:app --reload # if you are in the app directory
 uvicorn app.main:app --reload # if you are not in the app directory/ source directory
 ```
