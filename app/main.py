@@ -15,11 +15,11 @@ async def startup_db_client():
 async def shutdown_db_client():
     await close_mongo_connection()
 
-origins = ["http://127.0.0.1:8000/", "http://localhost:5173"]
+origins = ["http://127.0.0.1:8000/", "http://localhost:5173", "http://127.0.0.1:5173/"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Allows all origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]

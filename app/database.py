@@ -18,16 +18,16 @@ async def get_database() -> AsyncIOMotorClient:
 async def connect_to_mongo():
     database.client = AsyncIOMotorClient(str(os.getenv("MONGODB_URL")))
     
-    # Ping the database to ensure a successful connection
+    # Ping the database 
     db = database.client.get_database("sample_airbnb") #test is a name of 
     await db.command("ping")
     print("Connected to MongoDB \n")
 
     collection = db.get_collection("listingsAndReviews") 
-    # documents = await collection.find().to_list(length=2)  # Adjust the length as needed
+    # documents = await collection.find().to_list(length=2)  
     # for doc in documents:
     #     print(doc)
-    documents = await collection.find({}, {"name": 1, "_id": 0}).to_list(length=10)  # Adjust the length as needed
+    documents = await collection.find({}, {"name": 1, "_id": 0}).to_list(length=10)  
     for doc in documents:
         print(doc['name'])
 
