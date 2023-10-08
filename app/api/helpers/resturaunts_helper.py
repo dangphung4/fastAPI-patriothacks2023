@@ -148,6 +148,8 @@ def get_restaurants_by_category(
             official_site_url = website_link['href']
 
         # If the official website URL is found, scrape it for deals/specials
+
+        # deals and specials for future implementations
         deals = []
         specials = []
         if official_site_url:
@@ -172,7 +174,7 @@ def get_restaurants_by_category(
         restaurants.append(info_dict)
 
     # Insert the plain dictionary into the collection
-        # restaurant_info_collection.insert_one(info_dict)
+         # restaurant_info_collection.insert_one(info_dict)  # currently not working- throws error
     
     search_data = {"location": "George Mason University", "results": len(restaurants), "category": category}
     # category_search_collection.insert_one(search_data)
